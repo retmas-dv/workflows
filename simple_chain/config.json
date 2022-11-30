@@ -1,0 +1,5 @@
+{
+  "output": "outDS",
+  "nJobs": 3,
+  "nRandomNumbers": 10
+}

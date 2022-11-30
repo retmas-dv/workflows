@@ -1,0 +1,26 @@
+# noinspection PyUnresolvedReferences
+configfile: "config.json"
+
+# inspection PyUnresolvedReferences
+
+
+rule all:
+    params:
+        signal=None
+    input: config["output"]
+
+rule top:
+    params:
+        opt_exec=expand("echo %RNDM:{nRandomNumbers} > seed.txt",nRandomNumbers=config["nRandomNumbers"]),
+        opt_args=expand("--outputs seed.txt --nJobs {nJobs} --avoidVP",nJobs=config["nJobs"])
+    output: f'{config["output"]}.top'
+    shell: "prun"
+
+rule bottom:
+    params:
+        opt_inDS=rules.top.output[0],
+        opt_exec="echo %IN > results.root",
+        opt_args="--outputs results.root --forceStaged --avoidVP"
+    input: rules.top.output
+    output: config["output"]
+    shell: "prun"
