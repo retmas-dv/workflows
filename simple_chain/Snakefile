@@ -1,14 +1,13 @@
 # noinspection PyUnresolvedReferences
 configfile: "config.json"
 
-# inspection PyUnresolvedReferences
-
-
+# noinspection SmkRuleRedeclaration
 rule all:
     params:
         signal=None
     input: config["output"]
 
+# noinspection SmkRuleRedeclaration
 rule top:
     params:
         opt_exec=expand("echo %RNDM:{nRandomNumbers} > seed.txt",nRandomNumbers=config["nRandomNumbers"]),

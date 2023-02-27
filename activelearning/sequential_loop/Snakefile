@@ -1,0 +1,15 @@
+# noinspection PyUnresolvedReferences
+configfile: "../config.json"
+
+
+# noinspection SmkRuleRedeclaration
+rule all:
+    input: config["output"]
+
+# noinspection SmkUnrecognizedSection
+rule loop_a_point:
+    params:
+        dataset=[]
+    loop: True
+    output: config["output"]
+    shell: "../scatter_body/Snakefile"

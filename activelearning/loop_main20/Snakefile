@@ -1,0 +1,109 @@
+# noinspection PyUnresolvedReferences
+configfile: "../config.json"
+
+# noinspection SmkRuleRedeclaration
+rule all:
+    params:
+        param_sliced_myparamMZD=None,
+        param_sliced_myparamEPSILON=None
+    input: config["output"]
+
+rule step_evgen:
+    params:
+        opt_exec=lambda wildcards: "export JOBOPTSEARCHPATH=$PWD:$JOBOPTSEARCHPATH; " +
+                                   "export envPARAM_MZD=%{sliced_myparamMZD}; " +
+                                   "export envPARAM_EPSILON=%{sliced_myparamEPSILON}; Gen_tf.py --maxEvents=%MAXEVENTS " +
+                                   "--skipEvents=0 --ecmEnergy=13000 --firstEvent=%FIRSTEVENT:0 " +
+                                   "--outputEVNTFile=EVNT.pool.root.1 --randomSeed=%RNDM:100 --runNumber=999999 " +
+                                   "--AMITag=e4551 --jobConfig=999999; unset envPARAM_MZD envPARAM_EPSILON",
+        opt_args="--excludedSite IN2P3-LPC --outputs 'EVNT.pool.root.1' --nEvents=10000 --nJobs 20 " +
+                 "--athenaTag AthGeneration,21.6.92 --noBuild --expertOnly_skipScout --avoidVP",
+        opt_useAthenaPackages=True
+    output: f'{config["output"]}.step_evgen'
+    shell: "prun"
+
+rule step_simul:
+    params:
+        opt_inDS=rules.step_evgen.output[0],
+        opt_exec="Sim_tf.py --inputEVNTFile=%IN --maxEvents=%MAXEVENTS " +
+                 "--postInclude default:RecJobTransforms/UseFrontier.py " +
+                 "--preExec 'EVNTtoHITS:simFlags.SimBarcodeOffset.set_Value_and_Lock(200000)' " +
+                 "'EVNTtoHITS:simFlags.TRTRangeCut=30.0;simFlags.TightMuonStepping=True' " +
+                 "--preInclude EVNTtoHITS:SimulationJobOptions/preInclude.BeamPipeKill.py --skipEvents=%SKIPEVENTS " +
+                 "--firstEvent=%FIRSTEVENT:0 --outputHITSFile=HITS.pool.root.1 " +
+                 "--physicsList=FTFP_BERT_ATL_VALIDATION --randomSeed=%RNDM:1 --DBRelease=all:current " +
+                 "--conditionsTag default:OFLCOND-MC16-SDR-14 " +
+                 "--geometryVersion=default:ATLAS-R2-2016-01-00-01_VALIDATION --runNumber=999999 --AMITag=a875 " +
+                 "--DataRunNumber=284500 --simulator=ATLFASTII --truthStrategy=MC15aPlus",
+        opt_args="--excludedSite IN2P3-LPC --outputs 'HITS.pool.root.1' --nEventsPerFile=500 --nEventsPerJob 500 " +
+                 "--athenaTag Athena,21.0.31 --noBuild --expertOnly_skipScout --avoidVP",
+        opt_useAthenaPackages=True
+    output: f'{config["output"]}.step_simul'
+    input: rules.step_evgen.output
+    shell: "prun"
+
+rule step_reco:
+    params:
+        opt_inDS=rules.step_simul.output[0],
+        opt_exec="Reco_tf.py --inputHITSFile=%IN --maxEvents=%MAXEVENTS --postExec " +
+                 "'all:CfgMgr.MessageSvc().setError+=[\"HepMcParticleLink\"]' " +
+                 "'ESDtoAOD:fixedAttrib=[s if \"CONTAINER_SPLITLEVEL = '\"'\"'99'\"'\"'\" not in s else \"\" " +
+                 "for s in svcMgr.AthenaPoolCnvSvc.PoolAttributes];svcMgr.AthenaPoolCnvSvc.PoolAttributes=fixedAttrib' " +
+                 "--postInclude default:PyJobTransforms/UseFrontier.py " +
+                 "--preExec 'all:rec.Commissioning.set_Value_and_Lock(True);from AthenaCommon.BeamFlags " +
+                 "import jobproperties;jobproperties.Beam.numberOfCollisions.set_Value_and_Lock(20.0);from " +
+                 "LArROD.LArRODFlags import larRODFlags;larRODFlags.NumberOfCollisions.set_Value_and_Lock(20);" +
+                 "larRODFlags.nSamples.set_Value_and_Lock(4);larRODFlags.doOFCPileupOptimization.set_Value_and_Lock(True);" +
+                 "larRODFlags.firstSample.set_Value_and_Lock(0);larRODFlags.useHighestGainAutoCorr.set_Value_and_Lock(True); " +
+                 "from LArDigitization.LArDigitizationFlags import " +
+                 "jobproperties;jobproperties.LArDigitizationFlags.useEmecIwHighGain.set_Value_and_Lock(False)' " +
+                 "'ESDtoAOD:from TriggerJobOpts.TriggerFlags import TriggerFlags;TriggerFlags.AODEDMSet.set_Value_and_Lock(\"AODSLIM\");' " +
+                 "'all:from ParticleBuilderOptions.AODFlags import AODFlags; AODFlags.ThinInDetForwardTrackParticles.set_Value_and_Lock(True)' " +
+                 "--preInclude HITtoRDO:Digitization/ForceUseOfPileUpTools.py,SimulationJobOptions/preInclude.PileUpBunchTrainsMC16c_2017_Config1.py," +
+                 "RunDependentSimData/configLumi_run300000_mc16d.py --skipEvents=%SKIPEVENTS " +
+                 "--autoConfiguration=everything --conditionsTag default:OFLCOND-MC16-SDR-20 " +
+                 "--geometryVersion=default:ATLAS-R2-2016-01-00-01 --runNumber=999999 --digiSeedOffset1=%RNDM:1 " +
+                 "--digiSeedOffset2=%RNDM:1 --digiSteeringConf=StandardSignalOnlyTruth --AMITag=r10201 " +
+                 "--steering=doRDO_TRIG --inputHighPtMinbiasHitsFile=%IN_MINH --inputLowPtMinbiasHitsFile=%IN_MINL " +
+                 "--numberOfCavernBkg=0 --numberOfHighPtMinBias=0.2099789464 --numberOfLowPtMinBias=80.290021063135 " +
+                 "--pileupFinalBunch=6 --outputAODFile=AOD.pool.root.1 --jobNumber=%RNDM:1 " +
+                 "--triggerConfig=RDOtoRDOTrigger=MCRECO:DBF:TRIGGERDBMC:2179,51,207 --valid=True",
+        opt_args="--excludedSite IN2P3-LPC --outputs 'AOD.pool.root.1' --nEventsPerFile=500 --nEventsPerJob 500 " +
+                 "--athenaTag Athena,21.0.53 --noBuild --expertOnly_skipScout --avoidVP " +
+                 "--secondaryDSs IN_MINH:1:mc16_13TeV.361239.Pythia8EvtGen_A3NNPDF23LO_minbias_inelastic_high.simul.HITS.e4981_s3087_s3111/," +
+                 "IN_MINL:1:mc16_13TeV.361238.Pythia8EvtGen_A3NNPDF23LO_minbias_inelastic_low.simul.HITS.e4981_s3087_s3111/ " +
+                 "--notExpandSecDSs --forceStaged --forceStagedSecondary",
+        opt_useAthenaPackages=True
+    output: f'{config["output"]}.step_reco'
+    input: rules.step_simul.output
+    shell: "prun"
+
+rule step_deriv:
+    params:
+        opt_inDS=rules.step_reco.output[0],
+        opt_exec="Reco_tf.py --inputAODFile=%IN --athenaMPMergeTargetSize 'DAOD_*:0' " +
+                 "--preExec 'default:rec.doApplyAODFix.set_Value_and_Lock(True); from BTagging.BTaggingFlags " +
+                 "import BTaggingFlags;BTaggingFlags.CalibrationTag = \"BTagCalibRUN12-08-47\"; " +
+                 "from AthenaCommon.AlgSequence import AlgSequence; topSequence = AlgSequence(); " +
+                 "topSequence += CfgMgr.xAODMaker__DynVarFixerAlg(\"InDetTrackParticlesFixer\", " +
+                 "Containers = [ \"InDetTrackParticlesAux.\" ] );from AthenaMP.AthenaMPFlags import jobproperties as ampjp;" +
+                 "ampjp.AthenaMPFlags.UseSharedWriter=True;import AthenaPoolCnvSvc.AthenaPool;ServiceMgr.AthenaPoolCnvSvc.OutputMetadataContainer=\"MetaData\"' " +
+                 "--sharedWriter True --runNumber 999999 --AMITag p3870 --outputDAODFile pool.root.1 " +
+                 "--reductionConf HIGG2D1 --passThrough True",
+        opt_args="--excludedSite IN2P3-LPC --outputs 'DAOD_HIGG2D1.pool.root.1' --nEventsPerFile=500 " +
+                 "--nEventsPerJob 500 --athenaTag AthDerivation,21.2.64.0 --noBuild --expertOnly_skipScout --avoidVP " +
+                 "--forceStaged",
+        opt_useAthenaPackages=True
+    output: f'{config["output"]}.step_deriv'
+    input: rules.step_reco.output
+    shell: "prun"
+
+rule step_reana:
+    params:
+        opt_inDS=rules.step_deriv.output[0],
+        opt_containerImage="docker://gitlab-registry.cern.ch/zhangruihpc/iddsal:atlas-reana-submitter",
+        opt_exec=lambda wildcards: "source script_reana.sh %{i} %{sliced_myparamMZD} %{sliced_myparamEPSILON} %{DS0}",
+        opt_args="--site CERN --outputs out-rucio-2.tar --useSecrets"
+    output: config["output"]
+    input: rules.step_deriv.output
+    shell: "reana"

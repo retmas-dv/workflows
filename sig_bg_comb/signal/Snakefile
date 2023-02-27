@@ -1,8 +1,0 @@
-rule make:
-    params:
-        opt_inDS=config["signal"],
-        opt_containerImage="docker://busybox",
-        opt_exec="echo %IN > abc.dat; echo 123 > def.zip",
-        opt_args=expand("--outputs abc.dat,def.zip --nFilesPerJob {nFilesPerJob}",nFilesPerJob=config["nFilesPerJob"])
-    output: f'{config["output"]}'
-    shell: "prun"

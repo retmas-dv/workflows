@@ -1,0 +1,32 @@
+# noinspection PyUnresolvedReferences
+configfile: "../config.json"
+
+# noinspection PyUnresolvedReferences
+from snakeparser.utils import param_of
+
+# noinspection SmkRuleRedeclaration
+rule all:
+    params:
+        param_myparamMZD=[38],
+        param_myparamEPSILON=[0.1]
+    input: config["output"]
+
+
+# noinspection SmkUnrecognizedSection
+rule parallel_work:
+    params:
+        param_sliced_myparamMZD=param_of('param_myparamMZD',source=rules.all),
+        param_sliced_myparamEPSILON=param_of('param_myparamEPSILON',source=rules.all)
+    scatter: [param_of('param_sliced_myparamMZD'), param_of('param_sliced_myparamEPSILON')]
+    output: f'{config["output"]}.parallel_work'
+    shell: "../loop_main20/Snakefile"
+
+rule checkpoint:
+    params:
+        opt_inDS=rules.parallel_work.output[0],
+        opt_containerImage="docker://gitlab-registry.cern.ch/zhangruihpc/steeringcontainer:0.0.7",
+        opt_exec=lambda wildcards: "python active_learning_zz.py --max_rounds 1 --current_round %{i}",
+        opt_args="--site CERN --outputs 'results.json,history.json' --persistentFile history.json --forceStaged"
+    output: config["output"]
+    input: rules.parallel_work.output
+    shell: "junction"
