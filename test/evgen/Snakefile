@@ -1,0 +1,18 @@
+# noinspection PyUnresolvedReferences
+configfile: "../config.json"
+
+# noinspection SmkRuleRedeclaration
+rule all:
+    input: config["output"]
+
+rule evgen:
+    params:
+        opt_exec=lambda wildcards: "Gen_tf.py --maxEvents=10000 " +
+                                   "--skipEvents=0 --ecmEnergy=13000 --firstEvent=0 " +
+                                   "--outputEVNTFile=EVNT.pool.root.1 --randomSeed=78 --runNumber=513142 " +
+                                   "--AMITag=e8373 --jobConfig=513142",
+        opt_args="--outputs 'EVNT.pool.root.1' --nEvents=200000 --nJobs 20 " +
+                 "--athenaTag AthGeneration,21.6.76 --cmtConfig=x86_64-centos7-gcc62-opt",
+        opt_useAthenaPackages=True
+    output: f'{config["output"]}'
+    shell: "prun"
