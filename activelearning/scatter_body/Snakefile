@@ -2,7 +2,7 @@
 configfile: "../config.json"
 
 # noinspection PyUnresolvedReferences
-from snakeparser.utils import param_of
+from pandaserver.workflow.snakeparser.utils import param_of
 
 # noinspection SmkRuleRedeclaration
 rule all:
