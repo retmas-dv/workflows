@@ -2,7 +2,7 @@
 configfile: "../config.json"
 
 # noinspection PyUnresolvedReferences
-from pandaserver.workflow.snakeparser.utils import param_of
+from pandaserver.workflow.snakeparser.utils import param_of, param_exp
 
 # noinspection SmkRuleRedeclaration
 rule all:
@@ -12,7 +12,7 @@ rule all:
     input: config["output"]
 
 
-# noinspection SmkUnrecognizedSection
+# noinspection SmkUnrecognizedSection, SmkRuleRedeclaration
 rule parallel_work:
     params:
         param_sliced_myparamMZD=param_of('param_myparamMZD',source=rules.all),
@@ -21,11 +21,12 @@ rule parallel_work:
     output: f'{config["output"]}.parallel_work'
     shell: "../loop_main20/Snakefile"
 
+# noinspection SmkRuleRedeclaration
 rule checkpoint:
     params:
         opt_inDS=rules.parallel_work.output[0],
         opt_containerImage="docker://gitlab-registry.cern.ch/zhangruihpc/steeringcontainer:0.0.7",
-        opt_exec=lambda wildcards: "python active_learning_zz.py --max_rounds 1 --current_round %{i}",
+        opt_exec=param_exp("python active_learning_zz.py --max_rounds 1 --current_round %{i}"),
         opt_args="--site CERN --outputs 'results.json,history.json' --persistentFile history.json --forceStaged"
     output: config["output"]
     input: rules.parallel_work.output

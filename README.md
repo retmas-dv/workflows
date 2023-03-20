@@ -6,7 +6,7 @@ $ docker pull atlas/centos7-atlasos
 $ su -c "setenforce 0"
 $ docker run -i -t -v /cvmfs:/cvmfs atlas/centos7-atlasos /bin/bash
 $ yum update
-$ yum install voms-clients-cpp
+$ yum install voms-clients-cpp man-db
 $ wget https://bootstrap.pypa.io/pip/2.7/get-pip.py
 $ python get-pip.py
 $ git clone https://github.com/PanDAWMS/panda-client.git

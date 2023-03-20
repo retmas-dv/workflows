@@ -1,16 +1,19 @@
 # noinspection PyUnresolvedReferences
 configfile: "../config.json"
 
+# noinspection PyUnresolvedReferences
+from pandaserver.workflow.snakeparser.utils import param_exp
+
 # noinspection SmkRuleRedeclaration
 rule all:
     input: config["output"]
 
 rule evgen:
     params:
-        opt_exec=lambda wildcards: "Gen_tf.py --maxEvents=1000 " +
-                                   "--skipEvents=0 --ecmEnergy=13000 --firstEvent=0 " +
-                                   "--outputEVNTFile=EVNT.pool.root.1 --randomSeed=1 --runNumber=513142 " +
-                                   "--AMITag=e8373 --jobConfig=513142",
+        opt_exec=param_exp("Gen_tf.py --maxEvents=1000 " +
+                           "--skipEvents=0 --ecmEnergy=13000 --firstEvent=0 " +
+                           "--outputEVNTFile=EVNT.pool.root.1 --randomSeed=1 --runNumber=513142 " +
+                           "--AMITag=e8373 --jobConfig=513142"),
         opt_args="--outputs 'EVNT.pool.root.1' --nEvents=10000 --nJobs 10 " +
                  "--athenaTag AthGeneration,21.6.76",
         opt_useAthenaPackages=True

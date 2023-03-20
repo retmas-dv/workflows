@@ -1,6 +1,9 @@
 # noinspection PyUnresolvedReferences
 configfile: "../config.json"
 
+# noinspection PyUnresolvedReferences
+from pandaserver.workflow.snakeparser.utils import param_exp
+
 # noinspection SmkRuleRedeclaration
 rule all:
     params:
@@ -10,12 +13,12 @@ rule all:
 
 rule step_evgen:
     params:
-        opt_exec=lambda wildcards: "export JOBOPTSEARCHPATH=$PWD:$JOBOPTSEARCHPATH; " +
-                                   "export envPARAM_MZD=%{sliced_myparamMZD}; " +
-                                   "export envPARAM_EPSILON=%{sliced_myparamEPSILON}; Gen_tf.py --maxEvents=%MAXEVENTS " +
-                                   "--skipEvents=0 --ecmEnergy=13000 --firstEvent=%FIRSTEVENT:0 " +
-                                   "--outputEVNTFile=EVNT.pool.root.1 --randomSeed=%RNDM:100 --runNumber=999999 " +
-                                   "--AMITag=e4551 --jobConfig=999999; unset envPARAM_MZD envPARAM_EPSILON",
+        opt_exec=param_exp("export JOBOPTSEARCHPATH=$PWD:$JOBOPTSEARCHPATH; " +
+                           "export envPARAM_MZD=%{sliced_myparamMZD}; " +
+                           "export envPARAM_EPSILON=%{sliced_myparamEPSILON}; Gen_tf.py --maxEvents=%MAXEVENTS " +
+                           "--skipEvents=0 --ecmEnergy=13000 --firstEvent=%FIRSTEVENT:0 " +
+                           "--outputEVNTFile=EVNT.pool.root.1 --randomSeed=%RNDM:100 --runNumber=999999 " +
+                           "--AMITag=e4551 --jobConfig=999999; unset envPARAM_MZD envPARAM_EPSILON"),
         opt_args="--excludedSite IN2P3-LPC --outputs 'EVNT.pool.root.1' --nEvents=10000 --nJobs 20 " +
                  "--athenaTag AthGeneration,21.6.92 --noBuild --expertOnly_skipScout --avoidVP",
         opt_useAthenaPackages=True
@@ -102,7 +105,7 @@ rule step_reana:
     params:
         opt_inDS=rules.step_deriv.output[0],
         opt_containerImage="docker://gitlab-registry.cern.ch/zhangruihpc/iddsal:atlas-reana-submitter",
-        opt_exec=lambda wildcards: "source script_reana.sh %{i} %{sliced_myparamMZD} %{sliced_myparamEPSILON} %{DS0}",
+        opt_exec=param_exp("source script_reana.sh %{i} %{sliced_myparamMZD} %{sliced_myparamEPSILON} %{DS0}"),
         opt_args="--site CERN --outputs out-rucio-2.tar --useSecrets"
     output: config["output"]
     input: rules.step_deriv.output
